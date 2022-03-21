@@ -30,33 +30,33 @@ const promptUser = () => {
       ]
     }
   )
-  .then(answer => {
-    switch (answer.menu) {
-      case 'View All Departments':
-        viewAllDepartments();
-        break;
-      case 'Add Department':
-        addDepartment();
-        break;
-      case 'View All Roles':
-        viewAllRoles();
-        break;
-      case 'Add Role':
-        addRole();
-        break;
-      case 'View All Employees':
-        viewAllEmployees();
-        break;
-      case 'Add Employee':
-        addEmployee();
-        break;
-      case 'Update Employee Role':
-        updateEmployeeRole();
-        break;
-      default:
-        process.exit();
-    }
-  });
+    .then(answer => {
+      switch (answer.menu) {
+        case 'View All Departments':
+          viewAllDepartments();
+          break;
+        case 'Add Department':
+          addDepartment();
+          break;
+        case 'View All Roles':
+          viewAllRoles();
+          break;
+        case 'Add Role':
+          addRole();
+          break;
+        case 'View All Employees':
+          viewAllEmployees();
+          break;
+        case 'Add Employee':
+          addEmployee();
+          break;
+        case 'Update Employee Role':
+          updateEmployeeRole();
+          break;
+        default:
+          process.exit();
+      }
+    });
 };
 
 const viewAllDepartments = () => {
@@ -85,16 +85,16 @@ const addDepartment = () => {
       }
     }
   )
-  .then(answer => {
-    const sql = 'INSERT INTO department (name) values (?)';
-    db.query(sql, answer.department, (err, result) => {
-      if (err) {
-        return console.error(err);
-      }
-      console.log(`Added ${answer.department} to departments.`);
-      promptUser();
+    .then(answer => {
+      const sql = 'INSERT INTO department (name) values (?)';
+      db.query(sql, answer.department, (err, result) => {
+        if (err) {
+          return console.error(err);
+        }
+        console.log(`Added ${answer.department} to departments.`);
+        promptUser();
+      });
     });
-  });
 };
 
 const viewAllRoles = () => {
@@ -142,16 +142,16 @@ const addRole = () => {
         }
       }
     ])
-    .then(answers => {
-      const sql = 'INSERT INTO role (title, salary, department_id) values (?, ?, ?)';
-      db.query(sql, [answers.role, answers.salary, answers.department], (err, result) => {
-        if (err) {
-          return console.error(err);
-        }
-        console.log(`Added ${answers.role} to roles.`);
-        promptUser();
+      .then(answers => {
+        const sql = 'INSERT INTO role (title, salary, department_id) values (?, ?, ?)';
+        db.query(sql, [answers.role, answers.salary, answers.department], (err, result) => {
+          if (err) {
+            return console.error(err);
+          }
+          console.log(`Added ${answers.role} to roles.`);
+          promptUser();
+        });
       });
-    });
   });
 };
 
@@ -167,9 +167,8 @@ const viewAllEmployees = () => {
 };
 
 const addEmployee = () => {
-  db.query('SELECT title, id AS value FROM role;', (err, result) => {
-    // db.query('SELECT CONCAT(manager.first_name, " ", manager.last_name) AS manager, id as value FROM employee;', (err, result2) => {
-    db.query('SELECT title, id AS value FROM role;', (err, result2) => {
+  db.query('SELECT title FROM role;', (err, result) => {
+    db.query('SELECT CONCAT(employee.first_name, " ", employee.last_name) FROM employee WHERE manager_id;', (err, result2) => {
       inquirer.prompt([
         {
           type: 'input',
@@ -199,31 +198,94 @@ const addEmployee = () => {
           type: 'list',
           name: 'role',
           message: "What is the new employee's role?",
-          choices: result
+          choices: result.reduce((prev, next) => {
+            return prev.concat(Object.values(next))
+          }, [])
         },
         {
           type: 'list',
           name: 'manager',
           message: "Who is the new employee's manager?",
-          choices: result2
+          choices: result2.reduce((prev, next) => {
+            return prev.concat(Object.values(next))
+          }, [])
         }
       ])
-      .then(answers => {
-        const sql = 'INSERT INTO employee (first_name, last_name, role_id, manager_id) values (?, ?, ?, ?)';
-        db.query(sql, [answers.firstName, answers.lastName, answers.role, answers.manager], (err, result) => {
-          if (err) {
-            return console.error(err);
-          }
-          console.log(`Added ${answers.firstName} ${answers.lastName} to employees.`);
-          promptUser();
+        .then(answers => {
+          db.query('SELECT id FROM role WHERE title = ?', answers.role, (err, result) => {
+            if (err) {
+              return console.error(err);
+            }
+            const roleId = result[0].id;
+            const managerFirstName = answers.manager.split(' ')[0];
+            const managerLastName = answers.manager.split(' ')[1];
+            db.query('SELECT id FROM employee WHERE first_name = ? AND last_name = ?', [managerFirstName, managerLastName], (err, result) => {
+              if (err) {
+                return console.error(err);
+              }
+              const managerId = result[0].id;
+              const sql = 'INSERT INTO employee (first_name, last_name, role_id, manager_id) values (?, ?, ?, ?)';
+              db.query(sql, [answers.firstName, answers.lastName, roleId, managerId], (err, result) => {
+                if (err) {
+                  return console.error(err);
+                }
+                console.log(`Added ${answers.firstName} ${answers.lastName} to employees.`);
+                promptUser();
+              });
+            });
+          });
         });
-      });
     });
   });
 };
 
 const updateEmployeeRole = () => {
-  
+  db.query('SELECT CONCAT(employee.first_name, " ", employee.last_name) FROM employee;', (err, result) => {
+    db.query('SELECT title FROM role;', (err, result2) => {
+      inquirer.prompt([
+        {
+          type: 'list',
+          name: 'employee',
+          message: 'Which employee would you like to update?',
+          choices: result.reduce((prev, next) => {
+            return prev.concat(Object.values(next))
+          }, [])
+        },
+        {
+          type: 'list',
+          name: 'role',
+          message: "What is the new employee's role?",
+          choices: result2.reduce((prev, next) => {
+            return prev.concat(Object.values(next))
+          }, [])
+        }
+      ])
+        .then(answers => {
+          const employeeFirstName = answers.employee.split(' ')[0];
+          const employeeLastName = answers.employee.split(' ')[1];
+          db.query('SELECT id FROM employee WHERE first_name = ? AND last_name = ?', [employeeFirstName, employeeLastName], (err, result) => {
+            if (err) {
+              return console.error(err);
+            }
+            const employeeId = result[0].id;
+            db.query('SELECT id FROM role WHERE title = ?', answers.role, (err, result) => {
+              if (err) {
+                return console.error(err);
+              }
+              const roleId = result[0].id;
+              const sql = 'UPDATE employee SET role_id = ? WHERE id = ?';
+              db.query(sql, [roleId, employeeId], (err) => {
+                if (err) {
+                  return console.error(err);
+                }
+                console.log(`${answers.employee} role has been updated to ${answers.role}.`);
+                promptUser();
+              });
+            });
+          });
+        });
+    });
+  });
 };
 
 promptUser();
