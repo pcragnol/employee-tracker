@@ -1,6 +1,6 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
-const cTable = require('console.table');
+require('console.table');
 require('dotenv').config();
 
 const db = mysql.createConnection(
@@ -278,7 +278,7 @@ const updateEmployeeRole = () => {
                 if (err) {
                   return console.error(err);
                 }
-                console.log(`${answers.employee} role has been updated to ${answers.role}.`);
+                console.log(`Updated ${answers.employee} role to ${answers.role}.`);
                 promptUser();
               });
             });
