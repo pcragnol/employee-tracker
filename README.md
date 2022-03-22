@@ -23,7 +23,7 @@ npm i
 Then create a .env file that includes your MySQL username and password with the following command:
 
 ```
-cp .env.example .env
+cp .env.EXAMPLE .env
 ```
 
 Then create and seed the employees database with following commands:
